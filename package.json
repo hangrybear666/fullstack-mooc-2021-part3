@@ -1,0 +1,27 @@
+{
+  "name": "phonebook-backend",
+  "version": "0.0.1",
+  "description": "\"backend for a phonebook app\"",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hangrybear666/fullstack-mooc-2021-part3.git"
+  },
+  "author": "hangrybear666",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hangrybear666/fullstack-mooc-2021-part3/issues"
+  },
+  "homepage": "https://github.com/hangrybear666/fullstack-mooc-2021-part3#readme",
+  "dependencies": {
+    "express": "^4.17.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  }
+}
