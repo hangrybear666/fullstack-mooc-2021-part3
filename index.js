@@ -197,6 +197,7 @@ app.use(unknownEndpoint)
 
 /**
  * Listener keeping the server alive
+ * .env file contains port variable for heroku deployment
  */
 const PORT = process.env.PORT || 3002
 app.listen(PORT, () => {
