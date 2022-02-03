@@ -19,9 +19,11 @@
   },
   "homepage": "https://github.com/hangrybear666/fullstack-mooc-2021-part3#readme",
   "dependencies": {
-    "express": "^4.17.2"
+    "express": "^4.17.2",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
+    "cors": "^2.8.5",
     "nodemon": "^2.0.15"
   }
 }
