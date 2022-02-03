@@ -33,6 +33,15 @@ morgan.token('postBody', function getHeadr (req,res) {
 })
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :postBody'))
 
+/**
+ * static is a middleware for returning files
+ * allows express to server static content such as webpages in .html format
+ * http GET request to ROOT of URL will look in build folder for specified file
+ * http GET request to ROOT of URL will serve index.html if no file specified
+ * 404 otherwise
+ */
+app.use(express.static('build'))
+
 let persons = [
     {
       "id": 1,
@@ -60,10 +69,6 @@ let persons = [
  * http GET request to ROOT of URL
  * responds with html page
  */
-app.get('/', (request, response) => {
-  console.log(`GET server root queried by ${request.rawHeaders[2]} : ${request.rawHeaders[3]}`)
-  response.send('<h1>Hello World!</h1>')
-})
 
 /**
  * http GET request to INFO page of URL
