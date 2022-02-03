@@ -66,11 +66,6 @@ let persons = [
   ]
 
 /**
- * http GET request to ROOT of URL
- * responds with html page
- */
-
-/**
  * http GET request to INFO page of URL
  * responds with html page
  */
@@ -134,9 +129,11 @@ app.post('/api/persons', (request, response) => {
   const person = request.body
   const newId = persons.length > 0 ? Math.max(...persons.map(person => person.id +1)) : 0
   if (!person.name || !person.number) {
+    const errorMsg = {error: `either name or number missing, no persistence`}
     console.log("ERROR: either name or number missing, no persistence")
-    response.statusMessage = `Object not in correct format`
-    response.status(204).end()
+    console.log("ERROR: ", errorMsg.error)
+    response.json(errorMsg)
+    response.status(204)
   } else {
     const newPerson = {
       id: newId,
