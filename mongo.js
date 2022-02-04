@@ -7,6 +7,7 @@ console.log(url)
 mongoose.connect(url)
 
 const personSchema = new mongoose.Schema({
+  _id: String,
   id: Number,
   name: String,
   number: String,
@@ -34,9 +35,10 @@ const Person = mongoose.model('Person', personSchema)
 // })
 
 const person = new Person({
-  id: 1,
-  name: "Arto Hellas",
-  number: "040-123456"
+  _id: mongoose.Types.ObjectId(),
+  id: 4,
+  name: "Mary Poppendieck",
+  number: "39-23-6423122"
 })
 
 person.save().then(result => {

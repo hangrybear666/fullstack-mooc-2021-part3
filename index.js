@@ -50,29 +50,6 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :p
  */
 app.use(express.static('build'))
 
-let persons = [
-    {
-      "id": 1,
-      "name": "Arto Hellas",
-      "number": "040-123456"
-    },
-    {
-      "id": 2,
-      "name": "Ada Lovelace",
-      "number": "39-44-5323523"
-    },
-    {
-      "id": 3,
-      "name": "Dan Abramov",
-      "number": "12-43-234345"
-    },
-    {
-      "id": 4,
-      "name": "Mary Poppendieck",
-      "number": "39-23-6423122"
-    }
-  ]
-
 /**
  * http GET request to INFO page of URL
  * responds with html page
@@ -82,7 +59,7 @@ let persons = [
   Person.find({}).then(persons => {
     response.send(`<p>Phonebook has info for ${persons.length} people.</p> \n
     ${new Date}`)
-  })
+  }).catch(error => next(error))
 })
 
 /**
@@ -95,14 +72,14 @@ app.get('/api/persons', (request, response) => {
   Person.find({}).then(persons => {
     console.log(persons)
     response.json(persons)
-  })
+  }).catch(error => next(error))
 })
 
 /**
  * http GET request to /api/persons/id of URL
  * responds with json file containing exactly one note
  */
-app.get('/api/persons/:id', (request, response) => {
+app.get('/api/persons/:id', (request, response, next) => {
   console.log(`GET person with id ${request.params.id} queried by ${request.rawHeaders[2]} : ${request.rawHeaders[3]}`)
   console.log(request.params.id);
   console.log(typeof request.params.id);
@@ -114,7 +91,7 @@ app.get('/api/persons/:id', (request, response) => {
         const errorMsg = `<h4 style="color:red">person with id ${request.params.id} not found</h4>`
         response.status(404).send(errorMsg).end()
       }
-    })
+    }).catch(error => next(error))
 })
 
 /**
@@ -125,7 +102,7 @@ app.delete('/api/persons/:id', (request, response) => {
   console.log(`DELETE person with id ${request.params.id} queried by ${request.rawHeaders[0]} : ${request.rawHeaders[1]}`)
   Person.findByIdAndDelete(request.params.id).then(person => {
     if (!person) {
-      const errorMsg = {error: `Person with id ${id} not found.`}
+      const errorMsg = {error: `Person with id ${request.params.id} not found.`}
       response.statusMessage = errorMsg.error
       console.log("ERROR: ", errorMsg.error)
       response.json(errorMsg)
@@ -170,7 +147,7 @@ app.post('/api/persons', (request, response) => {
           response.status(200)
         })
       }
-    })
+    }).catch(error => next(error))
   }
 })
 
@@ -185,7 +162,7 @@ app.put('/api/persons/:id' , (request, response) => {
   if (request.body.number) {
     const filter = {_id: request.params.id}
     const update = {number: request.body.number}
-    Person.findOneAndUpdate(filter,update).then(person => {
+    Person.findOneAndUpdate(filter,update,{ new: true }).then(person => {
       if (person) {
         response.json(person)
         response.status(200)
@@ -196,7 +173,7 @@ app.put('/api/persons/:id' , (request, response) => {
         response.json(errorMsg)
         response.status(204)
       }
-    })
+    }).catch(error => next(error))
   } else {
     const errorMsg = {error: `no number provided in order to update`}
     response.statusMessage = errorMsg.error
@@ -215,6 +192,33 @@ const unknownEndpoint = (request, response) => {
   response.status(404).send({ error: 'unknown endpoint' })
 }
 app.use(unknownEndpoint)
+
+/**
+ * processes all errors that are called with next(error) after being caught
+ * only in case of a cast error, will this function perform custom actions,
+ * all other errors are processed normally by passing them on via next(error)
+ * @param {string} error
+ * @param {XHR} request
+ * @param {XHR} response
+ * @param {middleware} next
+ * @returns
+ */
+const errorHandler = (error, request, response, next) => {
+
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } else {
+    response.statusMessage = error.message
+    console.log("ERROR: ", error.message)
+    response.json(error.message)
+    response.status(204)
+  }
+
+  next(error)
+}
+
+// this has to be the last loaded middleware.
+app.use(errorHandler)
 
 /**
  * Listener keeping the server alive
