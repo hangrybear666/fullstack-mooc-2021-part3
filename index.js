@@ -36,7 +36,7 @@ app.use(cors(corsOptions))
  * the custom token adds logging of added objects for
  * POST requests and PUT requests, otherwise adds null
  */
-morgan.token('postBody', function getHeadr (req,res) {
+morgan.token('postBody', function getHeadr (req, res) { // eslint-disable-line
   return Object.keys(req.body).length === 0 ? null : JSON.stringify(req.body)
 })
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :postBody'))
@@ -54,8 +54,8 @@ app.use(express.static('build'))
  * http GET request to INFO page of URL
  * responds with html page
  */
- app.get('/info', (request, response) => {
-   console.log(`GET info queried by ${request.rawHeaders[2]} : ${request.rawHeaders[3]}`)
+app.get('/info', (request, response, next) => {
+  console.log(`GET info queried by ${request.rawHeaders[2]} : ${request.rawHeaders[3]}`)
   Person.find({}).then(persons => {
     response.send(`<p>Phonebook has info for ${persons.length} people.</p> \n
     ${new Date}`)
@@ -66,7 +66,7 @@ app.use(express.static('build'))
  * http GET request to /api/persons of URL
  * responds with json file containing all notes
  */
-app.get('/api/persons', (request, response) => {
+app.get('/api/persons', (request, response, next) => {
   console.log(`GET full list of persons queried by ${request.rawHeaders[2]} : ${request.rawHeaders[3]}`)
   // response.json(persons)
   Person.find({}).then(persons => {
@@ -81,8 +81,8 @@ app.get('/api/persons', (request, response) => {
  */
 app.get('/api/persons/:id', (request, response, next) => {
   console.log(`GET person with id ${request.params.id} queried by ${request.rawHeaders[2]} : ${request.rawHeaders[3]}`)
-  console.log(request.params.id);
-  console.log(typeof request.params.id);
+  console.log(request.params.id)
+  console.log(typeof request.params.id)
   Person.findById(request.params.id).
     then(person => {
       if (person) {
@@ -102,9 +102,9 @@ app.delete('/api/persons/:id', (request, response) => {
   console.log(`DELETE person with id ${request.params.id} queried by ${request.rawHeaders[0]} : ${request.rawHeaders[1]}`)
   Person.findByIdAndDelete(request.params.id).then(person => {
     if (!person) {
-      const errorMsg = {error: `Person with id ${request.params.id} not found.`}
+      const errorMsg = { error: `Person with id ${request.params.id} not found.` }
       response.statusMessage = errorMsg.error
-      console.log("ERROR: ", errorMsg.error)
+      console.log('ERROR: ', errorMsg.error)
       response.json(errorMsg)
       response.status(204)
     } else {
@@ -117,13 +117,13 @@ app.delete('/api/persons/:id', (request, response) => {
  * http POST request to /api/persons/id of URL
  * responds with nothing, or an error
  */
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', (request, response, next) => {
   console.log(`POST request received from  ${request.rawHeaders[0]} : ${request.rawHeaders[1]} wanting to add:\n`, request.body)
   const person = request.body
   if (!person.name || !person.number) {
-    const errorMsg = {error: `either name or number missing, no persistence`}
-    console.log("ERROR: either name or number missing, no persistence")
-    console.log("ERROR: ", errorMsg.error)
+    const errorMsg = { error: 'either name or number missing, no persistence' }
+    console.log('ERROR: either name or number missing, no persistence')
+    console.log('ERROR: ', errorMsg.error)
     response.json(errorMsg)
     response.status(204)
   } else {
@@ -132,12 +132,12 @@ app.post('/api/persons', (request, response) => {
       name:person.name,
       number: person.number
     })
-    Person.findOne({name: person.name}).then(person => {
+    Person.findOne({ name: person.name }).then(person => {
       console.log(person)
       if (person) {
-        const errorMsg = {error: `Person with name: ${person.name} already in db`}
+        const errorMsg = { error: `Person with name: ${person.name} already in db` }
         response.statusMessage = errorMsg.error
-        console.log("ERROR: ", errorMsg.error)
+        console.log('ERROR: ', errorMsg.error)
         response.json(errorMsg)
         response.status(204)
       } else {
@@ -155,29 +155,29 @@ app.post('/api/persons', (request, response) => {
  * http PUT request to /api/persons/id of URL
  * responds with nothing or an error
  */
-app.put('/api/persons/:id' , (request, response) => {
+app.put('/api/persons/:id' , (request, response, next) => {
   console.log(`PUT request received from  ${request.rawHeaders[0]} : ${request.rawHeaders[1]}
   > person with id: ${request.params.id} to be updated
   >> with data:`, request.body)
   if (request.body.number) {
-    const filter = {_id: request.params.id}
-    const update = {number: request.body.number}
+    const filter = { _id: request.params.id }
+    const update = { number: request.body.number }
     Person.findOneAndUpdate(filter,update,{ new: true }).then(person => {
       if (person) {
         response.json(person)
         response.status(200)
       } else {
-        const errorMsg = {error: `Person with id ${request.params.id} not found.`}
+        const errorMsg = { error: `Person with id ${request.params.id} not found.` }
         response.statusMessage = errorMsg.error
-        console.log("ERROR: ", errorMsg.error)
+        console.log('ERROR: ', errorMsg.error)
         response.json(errorMsg)
         response.status(204)
       }
     }).catch(error => next(error))
   } else {
-    const errorMsg = {error: `no number provided in order to update`}
+    const errorMsg = { error: 'no number provided in order to update' }
     response.statusMessage = errorMsg.error
-    console.log("ERROR: ", errorMsg.error)
+    console.log('ERROR: ', errorMsg.error)
     response.json(errorMsg)
     response.status(204)
   }
@@ -209,7 +209,7 @@ const errorHandler = (error, request, response, next) => {
     return response.status(400).send({ error: 'malformatted id' })
   } else {
     response.statusMessage = error.message
-    console.log("ERROR: ", error.message)
+    console.log('ERROR: ', error.message)
     response.json(error.message)
     response.status(204)
   }
