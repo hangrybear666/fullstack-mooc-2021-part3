@@ -1,6 +1,14 @@
 const express = require('express')
 const cors = require('cors')
 const morgan = require('morgan')
+const mongoose = require('mongoose')
+require('dotenv').config()
+
+/**
+ * connecting to a MongoDB instance is handled in this separate component
+ * the Person object is assigned to a personSchema, which defines the datatypes and variable names
+ */
+const Person = require('./models/person')
 
 /**
  * express library for rest call handling
@@ -70,9 +78,11 @@ let persons = [
  * responds with html page
  */
  app.get('/info', (request, response) => {
-  console.log(`GET info queried by ${request.rawHeaders[2]} : ${request.rawHeaders[3]}`)
-  response.send(`<p>Phonebook has info for ${persons.length} people.</p> \n
-  ${new Date}`)
+   console.log(`GET info queried by ${request.rawHeaders[2]} : ${request.rawHeaders[3]}`)
+  Person.find({}).then(persons => {
+    response.send(`<p>Phonebook has info for ${persons.length} people.</p> \n
+    ${new Date}`)
+  })
 })
 
 /**
@@ -81,7 +91,11 @@ let persons = [
  */
 app.get('/api/persons', (request, response) => {
   console.log(`GET full list of persons queried by ${request.rawHeaders[2]} : ${request.rawHeaders[3]}`)
-  response.json(persons)
+  // response.json(persons)
+  Person.find({}).then(persons => {
+    console.log(persons)
+    response.json(persons)
+  })
 })
 
 /**
@@ -90,14 +104,17 @@ app.get('/api/persons', (request, response) => {
  */
 app.get('/api/persons/:id', (request, response) => {
   console.log(`GET person with id ${request.params.id} queried by ${request.rawHeaders[2]} : ${request.rawHeaders[3]}`)
-  const id = Number(request.params.id)
-  const person = persons.find(person => person.id === id)
-  if (person) {
-    response.json(person)
-  } else {
-    const errorMsg = `<h4 style="color:red">person with id ${id} not found</h4>`
-    response.status(404).send(errorMsg).end()
-  }
+  console.log(request.params.id);
+  console.log(typeof request.params.id);
+  Person.findById(request.params.id).
+    then(person => {
+      if (person) {
+        response.json(person)
+      } else {
+        const errorMsg = `<h4 style="color:red">person with id ${request.params.id} not found</h4>`
+        response.status(404).send(errorMsg).end()
+      }
+    })
 })
 
 /**
@@ -106,18 +123,17 @@ app.get('/api/persons/:id', (request, response) => {
  */
 app.delete('/api/persons/:id', (request, response) => {
   console.log(`DELETE person with id ${request.params.id} queried by ${request.rawHeaders[0]} : ${request.rawHeaders[1]}`)
-  const id = Number(request.params.id)
-  const person = persons.find(person => person.id === id)
-  if(person) {
-    persons = persons.filter(person => person.id !== id )
-    response.status(200).end()
-  } else {
-    const errorMsg = {error:  `Person with id ${id} not found.`}
+  Person.findByIdAndDelete(request.params.id).then(person => {
+    if (!person) {
+      const errorMsg = {error: `Person with id ${id} not found.`}
       response.statusMessage = errorMsg.error
       console.log("ERROR: ", errorMsg.error)
       response.json(errorMsg)
       response.status(204)
-  }
+    } else {
+      response.status(200).end()
+    }
+  })
 })
 
 /**
@@ -127,7 +143,6 @@ app.delete('/api/persons/:id', (request, response) => {
 app.post('/api/persons', (request, response) => {
   console.log(`POST request received from  ${request.rawHeaders[0]} : ${request.rawHeaders[1]} wanting to add:\n`, request.body)
   const person = request.body
-  const newId = persons.length > 0 ? Math.max(...persons.map(person => person.id +1)) : 0
   if (!person.name || !person.number) {
     const errorMsg = {error: `either name or number missing, no persistence`}
     console.log("ERROR: either name or number missing, no persistence")
@@ -135,23 +150,27 @@ app.post('/api/persons', (request, response) => {
     response.json(errorMsg)
     response.status(204)
   } else {
-    const newPerson = {
-      id: newId,
+    const newPerson = new Person({
+      _id: mongoose.Types.ObjectId(),
       name:person.name,
       number: person.number
-    }
-    const existingPerson = persons.find(person => person.name === newPerson.name)
-    if (existingPerson) {
-      const errorMsg = {error: `Person already in db`}
-      response.statusMessage = errorMsg.error
-      console.log("ERROR: ", errorMsg.error)
-      response.json(errorMsg)
-      response.status(204)
-    } else {
-      persons = persons.concat(newPerson)
-      response.json(newPerson)
-      response.status(200)
-    }
+    })
+    Person.findOne({name: person.name}).then(person => {
+      console.log(person)
+      if (person) {
+        const errorMsg = {error: `Person with name: ${person.name} already in db`}
+        response.statusMessage = errorMsg.error
+        console.log("ERROR: ", errorMsg.error)
+        response.json(errorMsg)
+        response.status(204)
+      } else {
+        newPerson.save().then(result => {
+          console.log('person saved!', result)
+          response.json(newPerson)
+          response.status(200)
+        })
+      }
+    })
   }
 })
 
@@ -163,23 +182,23 @@ app.put('/api/persons/:id' , (request, response) => {
   console.log(`PUT request received from  ${request.rawHeaders[0]} : ${request.rawHeaders[1]}
   > person with id: ${request.params.id} to be updated
   >> with data:`, request.body)
-  const id = Number(request.params.id)
-  const person = persons.find(person => person.id === id)
-  if(person) {
-    if (request.body.number) {
-      const updatedPerson = {...person, number: request.body.number}
-      persons = persons.map(person => person.id === id ? updatedPerson :  person)
-      response.json(updatedPerson)
-      response.status(200)
-    } else {
-      const errorMsg = {error: `no number provided in order to update`}
-      response.statusMessage = errorMsg.error
-      console.log("ERROR: ", errorMsg.error)
-      response.json(errorMsg)
-      response.status(204)
-    }
+  if (request.body.number) {
+    const filter = {_id: request.params.id}
+    const update = {number: request.body.number}
+    Person.findOneAndUpdate(filter,update).then(person => {
+      if (person) {
+        response.json(person)
+        response.status(200)
+      } else {
+        const errorMsg = {error: `Person with id ${request.params.id} not found.`}
+        response.statusMessage = errorMsg.error
+        console.log("ERROR: ", errorMsg.error)
+        response.json(errorMsg)
+        response.status(204)
+      }
+    })
   } else {
-    const errorMsg = {error: `Person with id ${id} not found.`}
+    const errorMsg = {error: `no number provided in order to update`}
     response.statusMessage = errorMsg.error
     console.log("ERROR: ", errorMsg.error)
     response.json(errorMsg)
