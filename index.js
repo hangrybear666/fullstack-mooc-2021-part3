@@ -122,7 +122,6 @@ app.post('/api/persons', (request, response, next) => {
   const person = request.body
   if (!person.name || !person.number) {
     const errorMsg = { error: 'either name or number missing, no persistence' }
-    console.log('ERROR: either name or number missing, no persistence')
     console.log('ERROR: ', errorMsg.error)
     response.json(errorMsg)
     response.status(204)
@@ -145,9 +144,13 @@ app.post('/api/persons', (request, response, next) => {
           console.log('person saved!', result)
           response.json(newPerson)
           response.status(200)
+        }).catch(error => {
+          next(error)
         })
       }
-    }).catch(error => next(error))
+    }).catch(error => {
+      next(error)
+    })
   }
 })
 
@@ -159,21 +162,27 @@ app.put('/api/persons/:id' , (request, response, next) => {
   console.log(`PUT request received from  ${request.rawHeaders[0]} : ${request.rawHeaders[1]}
   > person with id: ${request.params.id} to be updated
   >> with data:`, request.body)
+
   if (request.body.number) {
     const filter = { _id: request.params.id }
     const update = { number: request.body.number }
-    Person.findOneAndUpdate(filter,update,{ new: true }).then(person => {
-      if (person) {
-        response.json(person)
-        response.status(200)
-      } else {
-        const errorMsg = { error: `Person with id ${request.params.id} not found.` }
-        response.statusMessage = errorMsg.error
-        console.log('ERROR: ', errorMsg.error)
-        response.json(errorMsg)
-        response.status(204)
-      }
-    }).catch(error => next(error))
+    Person.findOneAndUpdate(
+      filter,
+      update,
+      { new: true, runValidators: true, context: 'query' }) // to enable mongoose validation for PUT requests
+      .then(person => {
+        if (person) {
+          response.json(person)
+          response.status(200)
+        } else {
+          const errorMsg = { error: `Person with id ${request.params.id} not found.` }
+          response.statusMessage = errorMsg.error
+          console.log('ERROR: ', errorMsg.error)
+          response.json(errorMsg)
+          response.status(204)
+        }
+      })
+      .catch(error => next(error))
   } else {
     const errorMsg = { error: 'no number provided in order to update' }
     response.statusMessage = errorMsg.error
@@ -204,9 +213,11 @@ app.use(unknownEndpoint)
  * @returns
  */
 const errorHandler = (error, request, response, next) => {
-
+  console.log('errorHandler reached')
   if (error.name === 'CastError') {
     return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
   } else {
     response.statusMessage = error.message
     console.log('ERROR: ', error.message)
